@@ -3,157 +3,160 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BFHL Hierarchy Visualizer — Chitkara Full Stack Challenge</title>
-  <meta name="description" content="A premium REST API interaction frontend for processing node hierarchies, detecting cycles, and visual structure rendering.">
+  <title>BFHL Hierarchy Visualizer</title>
   <link rel="stylesheet" href="./index.css">
-  <!-- FontAwesome for rich modern icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <div class="container">
-    <header>
-      <div class="title-badge">
-        <i class="fa-solid fa-code-branch"></i> Chitkara Full Stack Engineering Challenge
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <h1 class="header-title">BFHL Hierarchy Visualizer</h1>
+        <p class="header-description">Processes node relationships into hierarchical groups and identifies cyclic dependencies.</p>
       </div>
-      <h1>BFHL Hierarchy Visualizer</h1>
-      <p class="subtitle">Interact with the POST /bfhl REST API to analyze node relationships, construct hierarchical trees, and detect cyclic groups.</p>
+      <div class="header-right">
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span>API Ready</span>
+        </div>
+      </div>
     </header>
 
-    <main>
-      <!-- Configuration & Input Sidebar -->
-      <section class="input-section" aria-label="Input Configuration">
-        <div class="glass-card">
-          <div class="section-title">
-            <i class="fa-solid fa-terminal"></i> API Setup & Input
-          </div>
+    <!-- Main Content Area -->
+    <main class="main-grid">
+      <!-- Left Panel: Input Section -->
+      <section class="left-panel" aria-label="Input Configuration">
+        <div class="card">
+          <h2 class="card-title">Input Data</h2>
           
           <form id="api-form" onsubmit="return false;">
             <div class="form-group">
-              <label for="api-url" class="form-label">HOSTED API ENDPOINT (/bfhl)</label>
+              <label for="api-url" class="form-label">API Endpoint</label>
               <input type="text" id="api-url" class="form-input" value="http://localhost:3000/bfhl" placeholder="https://your-api.vercel.app/bfhl" required>
             </div>
 
             <div class="form-group">
-              <label for="node-input" class="form-label">NODE INPUT LIST</label>
-              <div class="quick-presets">
-                <button type="button" id="btn-preset-pdf" class="btn-preset"><i class="fa-solid fa-file-pdf"></i> PDF Example</button>
-                <button type="button" id="btn-preset-cycle" class="btn-preset"><i class="fa-solid fa-rotate"></i> Pure Cycle</button>
-                <button type="button" id="btn-preset-diamond" class="btn-preset"><i class="fa-solid fa-gem"></i> Diamond</button>
-                <button type="button" id="btn-preset-clear" class="btn-preset"><i class="fa-solid fa-trash-can"></i> Clear</button>
+              <label for="node-input" class="form-label">Payload</label>
+              <div class="presets-container">
+                <button type="button" id="btn-preset-sample" class="btn-preset">Sample</button>
+                <button type="button" id="btn-preset-cycle" class="btn-preset">Cycle</button>
+                <button type="button" id="btn-preset-duplicate" class="btn-preset">Duplicate</button>
+                <button type="button" id="btn-preset-diamond" class="btn-preset">Diamond</button>
               </div>
-              <textarea id="node-input" class="form-textarea" placeholder='Enter nodes (e.g. A->B, A->C, B->D or JSON ["A->B", "A->C"])' required>A->B, A->C, B->D, C->E, E->F, X->Y, Y->Z, Z->X, P->Q, Q->R, G->H, G->H, G->I, hello, 1->2, A-></textarea>
+              <textarea id="node-input" class="form-textarea" placeholder='{&#10;  "data": ["A-&gt;B", "A-&gt;C", "B-&gt;D"]&#10;}' required>{
+  "data": [
+    "A->B", "A->C", "B->D", "C->E", "E->F",
+    "X->Y", "Y->Z", "Z->X",
+    "P->Q", "Q->R",
+    "G->H", "G->H", "G->I",
+    "hello", "1->2", "A->"
+  ]
+}</textarea>
             </div>
 
             <button type="submit" id="btn-submit" class="btn-submit">
-              <span class="btn-text"><i class="fa-solid fa-wand-magic-sparkles"></i> Analyze Hierarchies</span>
+              <span class="btn-text">Submit Request</span>
               <div class="spinner"></div>
             </button>
           </form>
 
           <div id="error-alert" class="error-alert" role="alert">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <span id="error-message">Connection failed. Please verify your API is running and CORS is enabled.</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span id="error-message">Connection failed. Verify API is running and CORS is enabled.</span>
           </div>
         </div>
       </section>
 
-      <!-- Results Display Section -->
-      <section class="results-section" aria-label="API Insights">
-        <div class="glass-card">
+      <!-- Right Panel: Response Section -->
+      <section class="right-panel" aria-label="API Response">
+        <div class="card">
           <!-- Empty State -->
           <div id="empty-state" class="empty-state">
-            <i class="fa-solid fa-cubes"></i>
-            <h2>No Data Analyzed Yet</h2>
-            <p>Click "Analyze Hierarchies" to send your node list to the API and visualize the output structure.</p>
+            <p>Enter payload and click "Submit Request" to view results.</p>
           </div>
 
-          <!-- Results Content (Initially Hidden) -->
-          <div id="results-content" class="results-wrapper hidden">
-            <!-- Identity Info -->
-            <div class="identity-card">
-              <div class="section-title">
-                <i class="fa-solid fa-id-card"></i> Candidate Identity
-              </div>
-              <div class="identity-grid">
-                <div class="identity-item">
-                  <div class="label">User ID</div>
-                  <div id="val-user-id" class="val">-</div>
+          <!-- Response Content (Initially Hidden) -->
+          <div id="results-content" class="output-section hidden">
+            
+            <!-- Summary Grid -->
+            <div class="summary-section">
+              <div class="summary-grid">
+                <div class="summary-item">
+                  <div class="summary-label">Total Trees</div>
+                  <div id="val-total-trees" class="summary-value">0</div>
                 </div>
-                <div class="identity-item">
-                  <div class="label">Email ID</div>
-                  <div id="val-email" class="val">-</div>
+                <div class="summary-item">
+                  <div class="summary-label">Total Cycles</div>
+                  <div id="val-total-cycles" class="summary-value">0</div>
                 </div>
-                <div class="identity-item">
-                  <div class="label">Roll Number</div>
-                  <div id="val-roll" class="val">-</div>
+                <div class="summary-item">
+                  <div class="summary-label">Largest Root</div>
+                  <div id="val-largest-root" class="summary-value">-</div>
                 </div>
               </div>
             </div>
 
-            <!-- Summary Statistics -->
-            <div class="summary-card">
-              <div class="section-title">
-                <i class="fa-solid fa-chart-pie"></i> Evaluation Summary
-              </div>
-              <div class="stats-grid">
-                <div class="stat-card">
-                  <div class="stat-title">Total Trees</div>
-                  <div id="val-total-trees" class="stat-value">0</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-title">Total Cycles</div>
-                  <div id="val-total-cycles" class="stat-value">0</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-title">Largest Tree Root</div>
-                  <div id="val-largest-root" class="stat-value">-</div>
-                </div>
+            <!-- Tabs Navigation -->
+            <div class="tabs-header">
+              <button type="button" id="tab-hierarchies" class="tab-btn active" onclick="switchTab('hierarchies')">
+                Hierarchy Viewer
+                <span id="badge-hierarchies" class="tab-badge">0</span>
+              </button>
+              <button type="button" id="tab-invalid" class="tab-btn" onclick="switchTab('invalid')">
+                Invalid Entries
+                <span id="badge-invalid" class="tab-badge">0</span>
+              </button>
+              <button type="button" id="tab-duplicates" class="tab-btn" onclick="switchTab('duplicates')">
+                Duplicate Edges
+                <span id="badge-duplicates" class="tab-badge">0</span>
+              </button>
+              <button type="button" id="tab-json" class="tab-btn" onclick="switchTab('json')">
+                Raw JSON
+              </button>
+            </div>
+
+            <!-- Tab Content: Hierarchies -->
+            <div id="content-hierarchies" class="tab-content active">
+              <div id="hierarchies-list" class="hierarchies-list">
+                <!-- Dynamically populated -->
               </div>
             </div>
 
-            <!-- Detailed Tabs -->
-            <div class="detailed-card">
-              <div class="tabs-nav">
-                <button type="button" id="tab-hierarchies" class="tab-btn active" onclick="switchTab('hierarchies')">
-                  <i class="fa-solid fa-sitemap"></i> Hierarchies
-                  <span id="badge-hierarchies" class="tab-badge">0</span>
-                </button>
-                <button type="button" id="tab-invalid" class="tab-btn" onclick="switchTab('invalid')">
-                  <i class="fa-solid fa-triangle-exclamation"></i> Invalid Entries
-                  <span id="badge-invalid" class="tab-badge">0</span>
-                </button>
-                <button type="button" id="tab-duplicates" class="tab-btn" onclick="switchTab('duplicates')">
-                  <i class="fa-solid fa-clone"></i> Duplicate Edges
-                  <span id="badge-duplicates" class="tab-badge">0</span>
-                </button>
-                <button type="button" id="tab-json" class="tab-btn" onclick="switchTab('json')">
-                  <i class="fa-solid fa-code"></i> Raw JSON
-                </button>
-              </div>
-
-              <!-- Tab Contents -->
-              <div id="content-hierarchies" class="tab-content active">
-                <div id="hierarchies-list" class="hierarchies-list">
-                  <!-- Dynamically populated -->
-                </div>
-              </div>
-
-              <div id="content-invalid" class="tab-content">
-                <div id="invalid-list" class="tags-grid">
-                  <!-- Dynamically populated -->
-                </div>
-              </div>
-
-              <div id="content-duplicates" class="tab-content">
-                <div id="duplicates-list" class="tags-grid">
-                  <!-- Dynamically populated -->
-                </div>
-              </div>
-
-              <div id="content-json" class="tab-content">
-                <pre id="raw-json-output" class="raw-json">{}</pre>
+            <!-- Tab Content: Invalid Entries -->
+            <div id="content-invalid" class="tab-content">
+              <div id="invalid-list" class="tags-container">
+                <!-- Dynamically populated -->
               </div>
             </div>
+
+            <!-- Tab Content: Duplicate Edges -->
+            <div id="content-duplicates" class="tab-content">
+              <div id="duplicates-list" class="tags-container">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Tab Content: Raw JSON -->
+            <div id="content-json" class="tab-content">
+              <div class="json-container">
+                <button type="button" id="btn-copy" class="btn-copy" onclick="copyRawJson()">
+                  <svg id="icon-copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <svg id="icon-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none; color:var(--color-success);">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span id="text-copy">Copy JSON</span>
+                </button>
+                <pre id="raw-json-output" class="json-pre">{}</pre>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>

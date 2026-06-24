@@ -1,16 +1,16 @@
-// Preset values
+// Preset JSON values
 const PRESETS = {
-  pdf: "A->B, A->C, B->D, C->E, E->F, X->Y, Y->Z, Z->X, P->Q, Q->R, G->H, G->H, G->I, hello, 1->2, A->",
-  cycle: "A->B, B->C, C->A, D->E, E->D",
-  diamond: "A->D, B->D, A->B, X->Y",
-  clear: ""
+  sample: `{\n  "data": [\n    "A->B", "A->C", "B->D", "C->E", "E->F",\n    "X->Y", "Y->Z", "Z->X",\n    "P->Q", "Q->R",\n    "G->H", "G->H", "G->I",\n    "hello", "1->2", "A->"\n  ]\n}`,
+  cycle: `{\n  "data": [\n    "A->B", "B->C", "C->A",\n    "D->E", "E->D"\n  ]\n}`,
+  duplicate: `{\n  "data": [\n    "A->B", "A->C", "A->B", "A->B", "C->D"\n  ]\n}`,
+  diamond: `{\n  "data": [\n    "A->D", "B->D", "A->B", "X->Y"\n  ]\n}`
 };
 
 // Event Listeners for Presets
-document.getElementById('btn-preset-pdf').addEventListener('click', () => setInput(PRESETS.pdf));
+document.getElementById('btn-preset-sample').addEventListener('click', () => setInput(PRESETS.sample));
 document.getElementById('btn-preset-cycle').addEventListener('click', () => setInput(PRESETS.cycle));
+document.getElementById('btn-preset-duplicate').addEventListener('click', () => setInput(PRESETS.duplicate));
 document.getElementById('btn-preset-diamond').addEventListener('click', () => setInput(PRESETS.diamond));
-document.getElementById('btn-preset-clear').addEventListener('click', () => setInput(PRESETS.clear));
 
 function setInput(val) {
   const textarea = document.getElementById('node-input');
@@ -46,13 +46,12 @@ document.getElementById('api-form').addEventListener('submit', async (e) => {
   const emptyState = document.getElementById('empty-state');
   const resultsContent = document.getElementById('results-content');
 
-  // Intelligent parser: handle JSON arrays, JSON objects with 'data', or comma/newline delimited strings
+  // Smart parser: handle JSON arrays, JSON objects with 'data', or comma/newline delimited strings
   let dataArray = [];
   if (rawInput.startsWith('[') && rawInput.endsWith(']')) {
     try {
       dataArray = JSON.parse(rawInput);
     } catch (err) {
-      // Fallback to splitting
       dataArray = parseDelimited(rawInput);
     }
   } else if (rawInput.startsWith('{') && rawInput.endsWith('}')) {
@@ -108,20 +107,37 @@ function parseDelimited(input) {
   return input.split(/,|\n/).map(s => s.trim()).filter(s => s.length > 0);
 }
 
+// Copy Raw JSON Functionality
+function copyRawJson() {
+  const jsonText = document.getElementById('raw-json-output').textContent;
+  navigator.clipboard.writeText(jsonText).then(() => {
+    const iconCopy = document.getElementById('icon-copy');
+    const iconCheck = document.getElementById('icon-check');
+    const textCopy = document.getElementById('text-copy');
+    
+    iconCopy.style.display = 'none';
+    iconCheck.style.display = 'inline-block';
+    textCopy.textContent = 'Copied!';
+    
+    setTimeout(() => {
+      iconCopy.style.display = 'inline-block';
+      iconCheck.style.display = 'none';
+      textCopy.textContent = 'Copy JSON';
+    }, 2000);
+  }).catch(() => {
+    alert('Failed to copy JSON to clipboard.');
+  });
+}
+
 // Render Results to DOM
 function renderResults(data) {
-  // 1. Identity
-  document.getElementById('val-user-id').textContent = data.user_id || '-';
-  document.getElementById('val-email').textContent = data.email_id || '-';
-  document.getElementById('val-roll').textContent = data.college_roll_number || '-';
-
-  // 2. Summary Stats
+  // 1. Summary Stats
   const summary = data.summary || { total_trees: 0, total_cycles: 0, largest_tree_root: null };
   document.getElementById('val-total-trees').textContent = summary.total_trees ?? 0;
   document.getElementById('val-total-cycles').textContent = summary.total_cycles ?? 0;
   document.getElementById('val-largest-root').textContent = summary.largest_tree_root || '-';
 
-  // 3. Tab Badges
+  // 2. Tab Badges
   const hierarchies = data.hierarchies || [];
   const invalid = data.invalid_entries || [];
   const duplicates = data.duplicate_edges || [];
@@ -130,10 +146,10 @@ function renderResults(data) {
   document.getElementById('badge-invalid').textContent = invalid.length;
   document.getElementById('badge-duplicates').textContent = duplicates.length;
 
-  // 4. Raw JSON
+  // 3. Raw JSON
   document.getElementById('raw-json-output').textContent = JSON.stringify(data, null, 2);
 
-  // 5. Render Hierarchies
+  // 4. Render Hierarchies
   const hierarchiesList = document.getElementById('hierarchies-list');
   hierarchiesList.innerHTML = '';
   
@@ -141,69 +157,66 @@ function renderResults(data) {
     hierarchiesList.innerHTML = '<div class="empty-state">No hierarchies or cyclic groups detected.</div>';
   } else {
     hierarchies.forEach(h => {
-      const item = document.createElement('div');
-      item.className = 'hierarchy-item';
+      const card = document.createElement('div');
+      card.className = 'hierarchy-card';
 
       let statusBadge = '';
       if (h.has_cycle) {
-        statusBadge = `<div class="badge-cycle"><i class="fa-solid fa-rotate"></i> Cyclic Group</div>`;
+        statusBadge = `<span class="badge badge-cycle">Cyclic Group</span>`;
       } else {
-        statusBadge = `<div class="badge-depth"><i class="fa-solid fa-arrow-down-9-1"></i> Depth: ${h.depth}</div>`;
+        statusBadge = `<span class="badge badge-depth">Depth: ${h.depth}</span>`;
       }
 
       let bodyHTML = '';
       if (h.has_cycle) {
-        bodyHTML = `<div style="color: var(--warning); font-weight: 500;"><i class="fa-solid fa-triangle-exclamation"></i> Cycle detected in this group. Tree structure is empty {}.</div>`;
+        bodyHTML = `<div class="cycle-notice">Cycle detected in this group. Tree structure is empty {}.</div>`;
       } else {
         bodyHTML = renderTreeDOM(h.tree, true);
       }
 
-      item.innerHTML = `
-        <div class="hierarchy-header">
-          <div class="root-info">
-            <div class="node-badge">${h.root || '?'}</div>
-            <div style="font-weight: 600; font-size: 1.1rem;">Root Node: ${h.root || '?'}</div>
-          </div>
+      card.innerHTML = `
+        <div class="hierarchy-card-header">
+          <span>Root Node: ${escapeHtml(h.root || '?')}</span>
           ${statusBadge}
         </div>
-        <div class="hierarchy-body">
+        <div class="hierarchy-card-body">
           ${bodyHTML}
         </div>
       `;
-      hierarchiesList.appendChild(item);
+      hierarchiesList.appendChild(card);
     });
   }
 
-  // 6. Render Invalid Entries
+  // 5. Render Invalid Entries
   const invalidList = document.getElementById('invalid-list');
   invalidList.innerHTML = '';
   if (invalid.length === 0) {
-    invalidList.innerHTML = '<div style="color: var(--text-muted);">No invalid entries detected in the input.</div>';
+    invalidList.innerHTML = '<div class="empty-state" style="padding:32px;">No invalid entries detected.</div>';
   } else {
     invalid.forEach(entry => {
       const tag = document.createElement('div');
-      tag.className = 'tag-item tag-invalid';
-      tag.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>"${escapeHtml(entry)}"</span>`;
+      tag.className = 'tag';
+      tag.textContent = String(entry);
       invalidList.appendChild(tag);
     });
   }
 
-  // 7. Render Duplicate Edges
+  // 6. Render Duplicate Edges
   const duplicatesList = document.getElementById('duplicates-list');
   duplicatesList.innerHTML = '';
   if (duplicates.length === 0) {
-    duplicatesList.innerHTML = '<div style="color: var(--text-muted);">No duplicate edges detected in the input.</div>';
+    duplicatesList.innerHTML = '<div class="empty-state" style="padding:32px;">No duplicate edges detected.</div>';
   } else {
     duplicates.forEach(entry => {
       const tag = document.createElement('div');
-      tag.className = 'tag-item tag-duplicate';
-      tag.innerHTML = `<i class="fa-solid fa-clone"></i> <span>"${escapeHtml(entry)}"</span>`;
+      tag.className = 'tag';
+      tag.textContent = String(entry);
       duplicatesList.appendChild(tag);
     });
   }
 }
 
-// Recursive function to generate clean HTML for tree nodes
+// Recursive function to generate clean HTML for tree nodes with pure CSS indentation/connecting lines
 function renderTreeDOM(treeObj, isRoot = false) {
   if (!treeObj || typeof treeObj !== 'object') return '';
   const keys = Object.keys(treeObj);
@@ -214,7 +227,7 @@ function renderTreeDOM(treeObj, isRoot = false) {
     const childrenHTML = renderTreeDOM(treeObj[key], false);
     html += `
       <div class="tree-node ${isRoot ? 'tree-root-level' : ''}">
-        <div class="tree-label"><i class="fa-solid fa-angle-right" style="color: var(--primary); margin-right: 0.4rem;"></i> ${escapeHtml(key)}</div>
+        <div class="tree-label">${escapeHtml(key)}</div>
         ${childrenHTML}
       </div>
     `;
