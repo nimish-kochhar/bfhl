@@ -36,8 +36,7 @@ app.post('/bfhl', (req, res) => {
         hierarchies: [],
         invalid_entries: [],
         duplicate_edges: [],
-        summary: { total_trees: 0, total_cycles: 0, largest_tree_root: null },
-        error: "Invalid request body. 'data' must be an array of node strings."
+        summary: { total_trees: 0, total_cycles: 0, largest_tree_root: null }
       });
     }
 
@@ -50,12 +49,14 @@ app.post('/bfhl', (req, res) => {
     // 1. Validate node format and detect duplicates
     for (const item of data) {
       if (typeof item !== 'string') {
-        invalid_entries.push(item);
+        // Coerce non-string values to their string representation
+        invalid_entries.push(String(item));
         continue;
       }
       // Rule: Trim whitespace first, then validate
       const trimmed = item.trim();
-      if (!trimmed.match(/^[A-Z]->[A-Z]$/)) {
+      // Reject empty strings, whitespace-only entries, and invalid formats
+      if (trimmed.length === 0 || !trimmed.match(/^[A-Z]->[A-Z]$/)) {
         invalid_entries.push(item);
         continue;
       }
@@ -257,7 +258,18 @@ app.post('/bfhl', (req, res) => {
     res.json(responsePayload);
   } catch (error) {
     console.error("Error processing request:", error);
-    res.status(500).json({ error: "Internal server error" });
+    const userId = process.env.USER_ID || "johndoe_17091999";
+    const emailId = process.env.EMAIL_ID || "john.doe@college.edu";
+    const collegeRollNumber = process.env.COLLEGE_ROLL_NUMBER || "21CS1001";
+    res.status(500).json({
+      user_id: userId,
+      email_id: emailId,
+      college_roll_number: collegeRollNumber,
+      hierarchies: [],
+      invalid_entries: [],
+      duplicate_edges: [],
+      summary: { total_trees: 0, total_cycles: 0, largest_tree_root: null }
+    });
   }
 });
 
